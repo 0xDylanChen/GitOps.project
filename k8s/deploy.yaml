@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: devops-portfolio-container
-        image: luck667986/devops-portfolio-api:v1
+        image: luck667986/devops-portfolio-api:d9a4d3a75d257afafe2fb6f6cea44c9b01697648
         ports:
         - containerPort: 8000
         resources:
