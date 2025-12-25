@@ -2,6 +2,8 @@ name: CI
 on:
   push:
     branches: [ main ]
+    tags:
+        - 'v*'
     paths-ignore:
       - 'k8s/**'
       - 'GitOps.md'
