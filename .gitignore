@@ -205,3 +205,21 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# 工具執行檔
+minikube-linux-amd64
+kubectl
+argocd-linux-amd64
+*.exe
+
+# 二進位工具
+minikube-linux-amd64
+kubectl
+*.exe
+
+# 編輯器設定
+.obsidian/
+.vscode/
+__pycache__/
+*.pyc
+
