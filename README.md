@@ -1,89 +1,123 @@
 # 🚀 GitOps Project: Zero-Cost DevOps Portfolio
 
 ![GitOps](https://img.shields.io/badge/GitOps-ArgoCD-orange?style=for-the-badge&logo=argo)
+![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?style=for-the-badge&logo=github-actions)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-Minikube-blue?style=for-the-badge&logo=kubernetes)
 ![Python](https://img.shields.io/badge/Python-FastAPI-green?style=for-the-badge&logo=python)
 ![Docker](https://img.shields.io/badge/Docker-Container-blue?style=for-the-badge&logo=docker)
 
-這是一個完整的 **GitOps 實作專案**，展示了從應用程式開發、容器化封裝，到自動化部署至 Kubernetes 的完整流程。本專案包含一個具備狀態 (Stateful) 的微服務應用，並透過 K8s 內部服務發現 (Service Discovery) 機制進行串接。
+這是一個完整的 **GitOps 實作專案**，展示了從應用程式開發、容器化封裝，到 CI/CD 全自動化部署至 Kubernetes 的完整流程。本專案包含一個具備狀態 (Stateful) 的微服務應用，並透過 GitHub Actions 與 ArgoCD 實現「推送到部署」的無人值守自動化。
 
 ## 🏗️ 系統架構 (Architecture)
 
-以下是目前部署在 Minikube 叢集中的微服務架構圖：
+### 1. CI/CD & GitOps Pipeline (The Workflow)
+這展示了當開發者 Push 程式碼後，系統如何自動運作：
+
+```mermaid
+graph LR
+    Dev(Developer) -->|git push| GitHub[GitHub Repo]
+    
+    subgraph CI Pipeline [GitHub Actions]
+        GitHub -->|Trigger| Build[Build Docker Image]
+        Build -->|Push| DockerHub[Docker Hub Registry]
+        Build -->|Update Tag| Manifest[Update k8s/deploy.yaml]
+        Manifest -->|Commit & Push| GitHub
+    end
+
+    subgraph CD Pipeline [GitOps via ArgoCD]
+        ArgoCD(ArgoCD Controller) -->|Sync| GitHub
+        ArgoCD -->|Deploy| K8s[Minikube Cluster]
+    end
+```
+
+#### 自動化實證 (Proof of Automation)
+*   **GitHub Actions CI 執行成功：**
+    ![GitHub Actions CI](screenshots/github_action_CI.jpg)
+
+*   **ArgoCD 自動部署狀態 (Fully Synced)：**
+    ![ArgoCD Dashboard](screenshots/argo_CD.jpg)
+
+### 2. 微服務架構 (Microservices)
+部署在 Kubernetes 內部的應用程式結構：
 
 ```mermaid
 graph TD
-    Client(Browser/User) -->|NodePort: 31245| ExtSVC[Service: devops-portfolio-service]
+    Client(Browser/User) -->|Port-Forward| AppSvc[Service: devops-portfolio-service]
     
     subgraph Kubernetes Cluster
-        ExtSVC -->|TargetPort: 8000| AppPod[Pod: FastAPI App]
+        AppSvc -->|TargetPort: 8000| AppPod[Pod: FastAPI App]
         
-        AppPod -->|Env: redis-service:6379| IntSVC[Service: redis-service]
-        IntSVC -->|TargetPort: 6379| RedisPod[Pod: Redis DB]
+        AppPod -->|Env: redis-service| RedisSvc[Service: redis-service]
+        RedisSvc -->|TargetPort: 6379| RedisPod[Pod: Redis DB]
     end
 
     style AppPod fill:#f9f,stroke:#333,stroke-width:2px
     style RedisPod fill:#bbf,stroke:#333,stroke-width:2px
-    style Client fill:#ff9,stroke:#333
 ```
-
-**運作流程：**
-1.  **外部連線**：使用者透過瀏覽器存取 Minikube 的 NodePort (例如 `127.0.0.1:43537`)。
-2.  **第一層轉發**：`devops-portfolio-service` 接收請求，導向 FastAPI Pod。
-3.  **內部請求**：FastAPI App 執行邏輯，發現需要讀取資料。
-4.  **服務發現**：App 透過環境變數 (`REDIS_HOST=redis-service`) 找到 Redis 的內部服務。
-5.  **資料存取**：`redis-service` 將請求轉發給 Redis Pod 進行讀寫，最後回傳結果。
 
 ## 🛠️ 技術堆疊 (Tech Stack)
 
 *   **Application**: Python 3.10, FastAPI (Async Web Framework)
 *   **Database**: Redis (In-memory Data Store)
-*   **Containerization**: Docker (Multi-stage Build)
-*   **Orchestration**: Kubernetes (Minikube)
-*   **CD / GitOps**: ArgoCD (Phase 4 Planned)
+*   **CI (Continuous Integration)**: GitHub Actions (Auto Build & Push)
+*   **CD (Continuous Deployment)**: ArgoCD (GitOps Sync)
+*   **Infrastructure**: Minikube (Local K8s), Docker Hub
 
-## 🚀 快速開始 (Quick Start)
+## 🚀 如何運行 (How to Run)
+
+由於本專案採用 GitOps 架構，你可以選擇「手動部署」或「體驗 GitOps 自動化」。
 
 ### 前置需求
+*   Minikube & Kubectl
 *   Docker Desktop
-*   Minikube
-*   Kubectl
 
-### 部署步驟
-1.  **啟動叢集**
+### 方式一：體驗全自動 GitOps (推薦)
+1.  **啟動 Minikube**
     ```bash
     minikube start
     ```
-
-2.  **一鍵部署 (App + Redis)**
+2.  **安裝 ArgoCD** (若尚未安裝)
     ```bash
-    kubectl apply -f k8s/deploy.yaml
+    kubectl create namespace argocd
+    kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
     ```
+3.  **連接 GitHub**
+    在 ArgoCD 中建立 App，指向本儲存庫的 `k8s/` 目錄。
+4.  **觸發更新**
+    *   修改 `app.py` 程式碼。
+    *   執行 `git push`。
+    *   觀察 GitHub Actions 自動打包 -> ArgoCD 自動部署更新。
 
-3.  **開啟服務頁面**
-    ```bash
-    minikube service devops-portfolio-service
-    ```
-    *(系統會自動開啟瀏覽器，或顯示網址供您複製)*
+### 方式二：手動部署 (僅測試 App)
+如果你不想設定 CI/CD，只想跑跑看程式：
+```bash
+# 直接部署 YAML
+kubectl apply -f k8s/deploy.yaml
 
-4.  **驗證功能**
-    *   **首頁**: 確認 API 運作正常 (`{"message": ...}`)
-    *   **計數器**: 存取 `/hits` 驗證 Redis 連線 (`{"hits": 1, ...}`)
+# 開啟通道連線
+kubectl port-forward svc/devops-portfolio-service 8000:8000
+```
+瀏覽器打開 `http://localhost:8000` 即可看到結果。
 
 ## 📚 API 文件
 
 | Method | Endpoint | Description | Status |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/` | 回傳歡迎訊息 | ✅ Ready |
+| `GET` | `/` | 回傳歡迎訊息 (會隨 GitOps 更新變動) | ✅ Ready |
 | `GET` | `/hits` | **(Stateful)** 存取 Redis 計數器並回傳造訪次數 | ✅ Ready |
 | `GET` | `/health` | **(Health Check)** 檢查 Redis 連線狀態 | ✅ Ready |
+
+### 成果展示 (Live Demo)
+以下是應用程式實際運行的畫面，顯示了與 Redis 連線後的計數功能：
+
+![Website Demo](screenshots/website.jpg)
 
 ## 📝 開發日誌
 
 *   **Phase 1**: 環境建置 (Minikube, Kubectl) - ✅ 完成
 *   **Phase 2**: App 開發 & Docker 封裝 - ✅ 完成
 *   **Phase 3**: K8s Manifests & 服務串接 - ✅ 完成
-*   **Phase 4**: ArgoCD 自動化部署 - 📅 待辦
+*   **Phase 4**: ArgoCD & GitHub Actions 全自動化 - ✅ **已完成 (Fully Automated)**
 
 ---
 **Author:** Dylan Chen
