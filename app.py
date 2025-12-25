@@ -13,7 +13,7 @@ r = redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
 
 @app.get("/")
 async def read_root():
-    return {"message": "Welcome to the GitOps Project!"}
+    return {"message": "Hello GitOps Master!!"}
 
 @app.get("/hits")
 async def get_hits():
