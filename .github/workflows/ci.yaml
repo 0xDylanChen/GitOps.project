@@ -1,7 +1,6 @@
 name: CI
 on:
   push:
-    branches: [ main ]
     tags:
         - 'v*'
     paths-ignore:
@@ -41,4 +40,4 @@ jobs:
 
             git add k8s/deploy.yaml
             git commit -m "ci: update image tag to ${{ github.sha }}" || echo "No changes to commit"
-            git push 
+            git push origin HEAD:main 
